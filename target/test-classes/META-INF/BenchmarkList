@@ -1,2 +1,0 @@
-JMH S 39 io.seedshare.tsp.api.impl.BenchmarkTest S 66 io.seedshare.tsp.api.impl.jmh_generated.BenchmarkTest_init_jmhTest S 4 init S 10 Throughput E A 1 1 1 E E E E E E E E E E E E E E E E E 
-JMH S 52 io.seedshare.tsp.api.impl.PerformanceBenchmarkRunner S 86 io.seedshare.tsp.api.impl.jmh_generated.PerformanceBenchmarkRunner_NNBenchmark_jmhTest S 11 NNBenchmark S 11 AverageTime E A 1 1 1 E E E E E E E E E E E E E E U 12 MILLISECONDS E E 
