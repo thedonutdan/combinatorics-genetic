@@ -117,6 +117,7 @@ public class GeneticDroneRouter extends AbstractDroneRouter {
   /** Tournament style elimination. Returns survivors */
   private List<List<ServiceDestination>> tournamentElimination(
       List<List<ServiceDestination>> population, int survivorCount, ServiceDestination origin) {
+
     List<List<ServiceDestination>> survivors = new ArrayList<>();
 
     for (int i = 0; i < survivorCount; i++) {
@@ -124,6 +125,9 @@ public class GeneticDroneRouter extends AbstractDroneRouter {
 
       for (int j = 0; j < population.size() / 5; j++) {
         List<ServiceDestination> candidate = population.get(random.nextInt(population.size()));
+        if (candidate.contains(null)) {
+          throw new IllegalStateException("null in tournament candidate");
+        }
         tournament.add(candidate);
       }
 
@@ -149,14 +153,17 @@ public class GeneticDroneRouter extends AbstractDroneRouter {
       child.set(i, parent1.get(i));
     }
 
-    // Fill in remaining slots with parent2 alleles (starting after gene and wrapping back around)
-    int currentIdx = (end + 1) % size;
-    for (int i = 0; i < size; i++) {
-      ServiceDestination candidate = parent2.get((end + 1 + i) % size);
-      if (!child.contains(candidate)) {
-        child.set(currentIdx, candidate);
-        currentIdx = (currentIdx + 1) % size;
+    // Fill in remaining alleles according to relative ordering from parent2
+    int childIdx = 0;
+    for (ServiceDestination allele : parent2) {
+      if (child.contains(allele)) continue;
+
+      while (child.get(childIdx) != null) {
+        childIdx++;
       }
+
+      child.set(childIdx, allele);
+      childIdx++;
     }
 
     return child;

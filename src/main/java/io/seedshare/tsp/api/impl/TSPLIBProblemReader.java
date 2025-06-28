@@ -41,6 +41,10 @@ public class TSPLIBProblemReader implements ProblemReader {
         ServiceDestination serviceDestination =
             new ServiceDestination(
                 items[0], Integer.parseInt(items[1]), Integer.parseInt(items[2]));
+        if (problem.contains(serviceDestination)) {
+          throw new IllegalStateException(
+              "Bad input: Repeated destination: " + serviceDestination.toString());
+        }
         problem.add(serviceDestination);
       }
 
