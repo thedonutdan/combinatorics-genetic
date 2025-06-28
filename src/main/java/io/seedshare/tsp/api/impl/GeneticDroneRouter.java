@@ -144,8 +144,10 @@ public class GeneticDroneRouter extends AbstractDroneRouter {
       List<ServiceDestination> parent1, List<ServiceDestination> parent2) {
     // Randomly select a gene from parent1 starting in the first half and ending in the last half
     int size = parent1.size();
-    int start = random.nextInt(size / 2);
-    int end = start + random.nextInt(size - start);
+    int a = random.nextInt(size);
+    int b = random.nextInt(size);
+    int start = Math.min(a, b);
+    int end = Math.max(a, b);
     List<ServiceDestination> child = new ArrayList<>(Collections.nCopies(size, null));
 
     // Preserve allele position from gene in child
