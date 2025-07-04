@@ -21,11 +21,25 @@ import java.util.List;
 public class RoutingProblem {
   private ServiceDestination distributionCenter;
   private List<ServiceDestination> serviceDestinations;
+  private List<ServiceDestination> optimalRoute;
 
   public RoutingProblem(
       ServiceDestination distributionCenter, List<ServiceDestination> serviceDestinations) {
     this.distributionCenter = distributionCenter;
     this.serviceDestinations = serviceDestinations;
+  }
+
+  public RoutingProblem(
+      ServiceDestination distributionCenter,
+      List<ServiceDestination> serviceDestinations,
+      List<ServiceDestination> optimalRoute) {
+    this.distributionCenter = distributionCenter;
+    this.serviceDestinations = serviceDestinations;
+    this.optimalRoute = optimalRoute;
+  }
+
+  public void setOptimalRoute(List<ServiceDestination> optimalRoute) {
+    this.optimalRoute = optimalRoute;
   }
 
   public ServiceDestination getDistributionCenter() {
@@ -34,5 +48,9 @@ public class RoutingProblem {
 
   public List<ServiceDestination> getServiceDestinations() {
     return serviceDestinations;
+  }
+
+  public List<ServiceDestination> getOptimalRoute() {
+    return optimalRoute;
   }
 }

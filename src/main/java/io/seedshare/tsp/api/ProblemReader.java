@@ -22,4 +22,6 @@ import java.io.IOException;
 /** Reads problem from input file */
 public interface ProblemReader {
   RoutingProblem readProblem(File file) throws IOException;
+
+  RoutingProblem readSolution(File file) throws IOException;
 }
