@@ -59,7 +59,7 @@ public class GeneticDroneRouter extends AbstractDroneRouter {
     for (int i = 0; i < islands; i++) {
       futures.add(
           executor.submit(
-              new IslandWorker(i, distributionCenter, serviceDestinations, epochs, migrationPool)));
+              new IslandWorker(i, distributionCenter, serviceDestinations, epochs, populationSize / islands, migrationPool)));
     }
 
     executor.shutdown();
@@ -231,6 +231,7 @@ public class GeneticDroneRouter extends AbstractDroneRouter {
     private final ServiceDestination origin;
     private final int islandId;
     private final int epochs;
+    private final int islandPopulationSize;
     private final ConcurrentMap<Integer, List<ServiceDestination>> migrationPool;
 
     public IslandWorker(
@@ -238,18 +239,20 @@ public class GeneticDroneRouter extends AbstractDroneRouter {
         ServiceDestination origin,
         List<ServiceDestination> serviceDestinations,
         int epochs,
+        int populationSize,
         ConcurrentMap<Integer, List<ServiceDestination>> migrationPool) {
       this.islandId = islandId;
       this.origin = origin;
       this.serviceDestinations = serviceDestinations;
       this.epochs = epochs;
+      this.islandPopulationSize = populationSize;
       this.migrationPool = migrationPool;
     }
 
     @Override
     public List<ServiceDestination> call() {
       List<List<ServiceDestination>> population = new ArrayList<>();
-      for (int i = 0; i < populationSize; i++) {
+      for (int i = 0; i < islandPopulationSize; i++) {
         List<ServiceDestination> randRoute = new ArrayList<>(serviceDestinations);
         Collections.shuffle(randRoute);
         population.add(randRoute);
@@ -259,18 +262,18 @@ public class GeneticDroneRouter extends AbstractDroneRouter {
         List<List<ServiceDestination>> culled = cull(population, origin);
         population = new ArrayList<>(culled);
 
-        while (population.size() < (int) Math.round(populationSize * 0.55)) {
+        while (population.size() < (int) Math.round(islandPopulationSize * 0.55)) {
           population.add(
               OX(
                   culled.get(random.nextInt(culled.size())),
                   culled.get(random.nextInt(culled.size()))));
         }
 
-        while (population.size() < (int) Math.round(populationSize * 0.9)) {
+        while (population.size() < (int) Math.round(islandPopulationSize * 0.9)) {
           population.add(swapMutate(culled.get(random.nextInt(culled.size()))));
         }
 
-        while (population.size() < populationSize) {
+        while (population.size() < islandPopulationSize) {
           List<ServiceDestination> randRoute = new ArrayList<>(serviceDestinations);
           Collections.shuffle(randRoute);
           population.add(randRoute);
