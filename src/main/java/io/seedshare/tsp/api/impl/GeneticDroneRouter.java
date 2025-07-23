@@ -22,7 +22,15 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /** Routes the drone's path using genetic approximation */
 public class GeneticDroneRouter extends AbstractDroneRouter {
@@ -42,6 +50,38 @@ public class GeneticDroneRouter extends AbstractDroneRouter {
     if (distributionCenter == null || serviceDestinations == null) {
       throw new IllegalArgumentException("route(): arguments cannot be null");
     }
+
+    int islands = Runtime.getRuntime().availableProcessors();
+    ExecutorService executor = Executors.newFixedThreadPool(islands);
+    ConcurrentMap<Integer, List<ServiceDestination>> migrationPool = new ConcurrentHashMap<>();
+
+    List<Future<List<ServiceDestination>>> futures = new ArrayList<>();
+    for (int i = 0; i < islands; i++) {
+      futures.add(
+          executor.submit(
+              new IslandWorker(i, distributionCenter, serviceDestinations, epochs, migrationPool)));
+    }
+
+    executor.shutdown();
+    List<ServiceDestination> best = null;
+    double bestLength = Double.MAX_VALUE;
+
+    try {
+      for (Future<List<ServiceDestination>> future : futures) {
+        List<ServiceDestination> candidate = future.get();
+        double len = routeLength(candidate, distributionCenter);
+        if (len < bestLength) {
+          best = candidate;
+          bestLength = len;
+        }
+      }
+    } catch (InterruptedException | ExecutionException e) {
+      throw new RuntimeException("Threading error in genetic router island model", e);
+    }
+
+    return best;
+
+    /*
     // Start with completely random population
     List<List<ServiceDestination>> population = new ArrayList<>();
 
@@ -77,6 +117,7 @@ public class GeneticDroneRouter extends AbstractDroneRouter {
     population.sort(Comparator.comparingDouble(route -> routeLength(route, distributionCenter)));
 
     return population.get(0);
+    */
   }
 
   /**
@@ -183,5 +224,72 @@ public class GeneticDroneRouter extends AbstractDroneRouter {
     child.set(i, allele2);
 
     return child;
+  }
+
+  private class IslandWorker implements Callable<List<ServiceDestination>> {
+    private final List<ServiceDestination> serviceDestinations;
+    private final ServiceDestination origin;
+    private final int islandId;
+    private final int epochs;
+    private final ConcurrentMap<Integer, List<ServiceDestination>> migrationPool;
+
+    public IslandWorker(
+        int islandId,
+        ServiceDestination origin,
+        List<ServiceDestination> serviceDestinations,
+        int epochs,
+        ConcurrentMap<Integer, List<ServiceDestination>> migrationPool) {
+      this.islandId = islandId;
+      this.origin = origin;
+      this.serviceDestinations = serviceDestinations;
+      this.epochs = epochs;
+      this.migrationPool = migrationPool;
+    }
+
+    @Override
+    public List<ServiceDestination> call() {
+      List<List<ServiceDestination>> population = new ArrayList<>();
+      for (int i = 0; i < populationSize; i++) {
+        List<ServiceDestination> randRoute = new ArrayList<>(serviceDestinations);
+        Collections.shuffle(randRoute);
+        population.add(randRoute);
+      }
+
+      for (int e = 0; e < epochs; e++) {
+        List<List<ServiceDestination>> culled = cull(population, origin);
+        population = new ArrayList<>(culled);
+
+        while (population.size() < (int) Math.round(populationSize * 0.55)) {
+          population.add(
+              OX(
+                  culled.get(random.nextInt(culled.size())),
+                  culled.get(random.nextInt(culled.size()))));
+        }
+
+        while (population.size() < (int) Math.round(populationSize * 0.9)) {
+          population.add(swapMutate(culled.get(random.nextInt(culled.size()))));
+        }
+
+        while (population.size() < populationSize) {
+          List<ServiceDestination> randRoute = new ArrayList<>(serviceDestinations);
+          Collections.shuffle(randRoute);
+          population.add(randRoute);
+        }
+
+        if (e % 10 == 0 && migrationPool != null) {
+          population.sort(Comparator.comparingDouble(route -> routeLength(route, origin)));
+          migrationPool.put(islandId, new ArrayList<>(population.get(0)));
+
+          for (Map.Entry<Integer, List<ServiceDestination>> entry : migrationPool.entrySet()) {
+            if (entry.getKey() != islandId) {
+              population.set(random.nextInt(population.size()), new ArrayList<>(entry.getValue()));
+            }
+          }
+        }
+      }
+
+      population.sort(Comparator.comparingDouble(route -> routeLength(route, origin)));
+      return population.get(0);
+    }
   }
 }
